@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Database (your .db file has runtime data, not source code)
+*.db
+
+# Editor clutter
+.vscode/
+.idea/
+*.DS_Store
