@@ -27,8 +27,9 @@ class Card:
         self.value = value
 
     def __str__(self):
-        return(f'{self.value.name} of {self.suit.value}')
+        return f"{self.value.name} of {self.suit.value}"
 
+    __repr__ = __str__
 
 if __name__ == "__main__":
     card = Card(Suit.HEARTS, Value.ACE)
