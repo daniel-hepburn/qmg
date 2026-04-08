@@ -31,7 +31,4 @@ class Card:
 
     __repr__ = __str__
 
-if __name__ == "__main__":
-    card = Card(Suit.HEARTS, Value.ACE)
-    print(card)
 
