@@ -6,34 +6,40 @@ class Game:
     def __init__(self, player_names):
         """
         handles game setup
-        """
-
-        #check names are unique
-        if player_names.sort() != list(set(player_names)).sort():
-            raise ValueError("Please enter unqiue names")
-        
-        #define key attributes
+        """        
+        #define key attributes & check players are valid
         self.player_names = player_names
         self.player_count = len(player_names)
+
+        self._valid_players_check(player_names)
+
         self.game_in_progress = True
         self.declared = None
 
-        #check that a valid number of players was entered
-        if self.player_count == 0:
-            raise ValueError("Please enter at least 1 player name")
-        elif self.player_count > 8:
-            raise ValueError("Please enter no more than 8 player names")
-        
-        #initialise and shuffle the deck
+        #initialise and shuffle the deck, and create an empty bin to store discards
         self.deck = Deck()
         self.deck.shuffle()
-
-        #create a bin to store discards
         self.bin = []
 
-        #initialise all the players into a nested list
+        #initialise all the players into a nested list, then deal 6 cards to each
         self.players = [Player(pn) for pn in player_names]
+        self._deal_initial_hands()
 
+
+    def _valid_players_check(self, player_names):
+        #check that a valid number of players was entered
+        if self.player_count == 0:
+            raise ValueError("Please enter at least 1 player name.")
+        elif self.player_count > 8:
+            raise ValueError("Please enter no more than 8 player names.")
+
+        #check names are unique
+        unique_names = list(set(self.player_names))
+        if len(unique_names) != self.player_count:
+            raise ValueError("Please enter unique names.")
+
+
+    def _deal_initial_hands(self):
         #deal and print each player's hand
         print("Shuffling the deck & dealing 6 cards to each player:")
         for p in self.players:
@@ -48,80 +54,138 @@ class Game:
         #announce that the game is over & who declared
         print(f"Game over. {self.declared} declared.")
 
-        #store scores in a list and calculate winners based on smallest final score
-        final_scores = [int(player.score()) for player in self.players]
-        min_score = min(final_scores)
-        winners = [str(player) for player in self.players if player.score() == min_score]
+        #determine & announce scores & winners
+        winners = self._determine_winners()  
+        self._announce_scores(winners)
+            
+
+    def _determine_winners(self):
+        self.final_scores = [int(player.score()) for player in self.players]
+        self.winning_score = min(self.final_scores)
+        winner_list = [str(player) for player in self.players if player.score() == self.winning_score]
+        return winner_list
+
+
+    def _announce_scores(self, winners):
         winner_count = len(winners)
-
-
         for i in range(self.player_count):
-            print(f"{self.player_names[i]} had a score of {final_scores[i]}")
-        
+            print(f"{self.player_names[i]} had a score of {self.final_scores[i]}")
+
         if winner_count == 1:
             winner = winners[0]
-            print(f"{winner} won with a score of {min_score}")
-
+            print(f"{winner} won with a score of {self.winning_score}")
         elif winner_count > 1:
-            print(f"It's a {winner_count}-way tie between {", ".join(winners)}, with a score of {min_score}")
+            print(f"It's a {winner_count}-way tie between {", ".join(winners)}, with a score of {self.winning_score}")
+            
 
 
 
-    def player_card_swap(self, swapper, swap_type):
-        victim_name = input("Please enter the name of the player with whom you would like to swap.")
+    #def player_card_swap(self, swapper, swap_type):
+    #    victim_name = input("Please enter the name of the player with whom you would like to swap.")
 
 
 
     #current player can declare; otherwise they draw a card, and choose whether to swap it out for one of their own or discard it
-    def play_turn(self, player):
-        pn = self.player_names[self.players.index(player)]
-        print(f"{pn}'s turn")
-        declare_decision = input("Enter 'declare' to end the game now. Enter anything else to draw a card.")
-        if declare_decision == "declare":
-            self.declared = player 
-            self.game_in_progress = False
-        else:
-            #check that the deck isn't empty; if it is, recycle & shuffle the bin
-            if len(self.deck.cards) == 0:
-                print("Deck is empty. Shuffling the bin into a new deck.")
-                for i in range(len(self.bin)):
-                    self.deck.cards.append(self.bin.pop())
-                self.deck.shuffle()
-                #code to shuffle bin into deck
+#    def play_turn(self, player):
+#        #declare or draw
+#        #
+#        #
+#        pn = self.player_names[self.players.index(player)]
+#        print(f"{pn}'s turn")
+#        declare_decision = input("Enter 'declare' to end the game now. Enter anything else to draw a card.")
+#        if declare_decision == "declare":
+#            self.declared = player 
+#            self.game_in_progress = False
+#        else:
+#            #check that the deck isn't empty; if it is, recycle & shuffle the bin
+#            if len(self.deck.cards) == 0:
+#                print("Deck is empty. Shuffling the bin into a new deck.")
+#                for i in range(len(self.bin)):
+#                    self.deck.cards.append(self.bin.pop())
+#                self.deck.shuffle()
+#                #code to shuffle bin into deck
 
-            drawn = self.deck.draw_card()
-            print(f"You drew {drawn}")
+#            drawn = self.deck.draw_card()
+#            print(f"You drew {drawn}")
             
             #need to add try/except here
-            decision = int(input(f"Enter a number 1-{len(player.hand)} to choose which of your cards to swap out, or enter 0 to discard without swapping."))
-            if decision == 0:
-                if drawn.value in [11,12]:
-                    if drawn.value == 11:
-                        swap_type = "seen"
+#            decision = int(input(f"Enter a number 1-{len(player.hand)} to choose which of your cards to swap out, or enter 0 to discard without swapping."))
+#            if decision == 0:
+#                if drawn.value in [11,12]:
+#                    if drawn.value == 11:
+#                        swap_type = "seen"
 
-                    elif drawn.value == 12:
-                        swap_type = "blind"
-
-                    swap_decision = input(f"You may now make a {swap_type} swap with another player. If you wish to continue, please enter the name of the player with whom you wish to swap. Enter anything else (i.e. not a player name) to skip.")
-                    if swap_decision not in self.player_names:
-                        pass
-                    else:
-                        victim = self.players[self.player_names.index(swap_decision)]
-                        own_card = input(f"Enter a number, 1-{len(player.hand)}, to give away.")
-                        victim_card = input(f"Enter a number, 1-{len(victim.hand)}, to take.")
+#                    elif drawn.value == 12:
+#                       swap_type = "blind"
+#
+#                    swap_decision = input(f"You may now make a {swap_type} swap with another player. If you wish to continue, please enter the name of the player with whom you wish to swap. Enter anything else (i.e. not a player name) to skip.")
+#                    if swap_decision not in self.player_names:
+#                        pass
+#                    else:
+#                        victim = self.players[self.player_names.index(swap_decision)]
+#                        own_card = input(f"Enter a number, 1-{len(player.hand)}, to give away.")
+#                        victim_card = input(f"Enter a number, 1-{len(victim.hand)}, to take.")
 #need to finish swap code from here-------------------------------------------------------------------------
-
-                
-
-
-            elif 1<= decision <= len(player.hand):
-                drawn, player.hand[decision-1] = player.hand[decision-1], drawn
-            else:
-                raise ValueError("You must enter a number 0-6 to swap")
             
+
+#            elif 1<= decision <= len(player.hand):
+#                drawn, player.hand[decision-1] = player.hand[decision-1], drawn
+#            else:
+#                raise ValueError("You must enter a number 0-6 to swap")
+#            
+#            self.bin.append(drawn)
+
+
+    def play_turn(self, player, declare_or_draw):
+        pn = self.player_names[self.players.index(player)]
+        print(f"{pn}'s turn")
+
+        if declare_or_draw == "declare":
+            self.declared = player
+            self.game_in_progress = False
+            return None
+
+        elif declare_or_draw == "draw":
+            self._check_deck_empty()
+
+            drawn = self.deck.draw_card()
+            print(f"You drew {drawn}.")
+
+            keep_or_discard = self.input_keep_discard()
+            swap_index = self._after_drawing(keep_or_discard)
+            if swap_index == -1:
+                #insert seen/unseen swap function
+                pass
+            elif 0 <= swap_index <= 5:
+                drawn, player.hand[swap_index] = player.hand[swap_index], drawn
+            else:
+                raise ValueError("Swap index must be integer value, -1 <= x <= 5")
+
             self.bin.append(drawn)
 
 
+        else:
+            raise ValueError("Please either 'draw' or 'declare'")
+
+
+    def _check_deck_empty(self):
+        if len(self.deck.cards) == 0:
+            print("Deck is empty. Shuffling the bin into a new deck.")
+            for i in range(len(self.bin)):
+                self.deck.cards.append(self.bin.pop())
+            self.deck.shuffle()
+            
+
+    def _after_drawing(self, keep_or_discard):
+        if keep_or_discard == "keep":
+            print("You must now choose a card from your own hand to swap out.")
+            swap_index = self.input_select_a_card() - 1
+            return swap_index
+        
+        elif keep_or_discard == "discard":
+            return -1
+        else:
+            raise ValueError("You must either keep or discard.")
 
     #ask all players if they want to discard on top of the bin
     def discard_opportunity(self):
@@ -191,40 +255,44 @@ class Game:
                     if player.is_out:
                         pass
                     else:
-                        self.play_turn(player)
+                        print(f"{player.name}'s turn.")
+                        draw_or_declare = self.input_draw_declare()
+                        self.play_turn(player, draw_or_declare)
                         self.discard_opportunity()
                 else:
                     self.end()
 
-#dedicated input methods follow:
-
-#declare or draw a card
-def input_declare_draw(self):
-    decision = input("Enter 'draw' to draw a card. Enter 'declare' to declare and end the game.")
-    return decision
-
-#keep/discard a drawn card
-def input_keep_discard(self):
-    decision = input("Enter 'keep' to keep this card. Enter 'discard' to discard it.")
-    return decision
-
-#use/ignore an 'action' card (Jack/Queen)
-def input_use_ignore(self):
-    decision = input("Enter 'use' to go forward with this card's action. Enter 'ignore' to ignore its action.")
-    return decision
-
-#swap or retain own card (for seen swaps)
-def input_swap_retain(self):
-    decision = input("Enter 'swap' to swap with another player. Enter 'ignore' not to swap.")
-    return decision
-
-#select a card from a hand
-def input_select_a_card(self):
-    decision = input(f"Enter a card's position, 1-6, which you would like to select.")
-    return decision
 
 
-#select a player to swap with
-def input_select_a_player(self):
-    decision = input(f"Please select a player by entering a name from the following list: {", ".join(self.player_names)}")
 
+    ###***dedicated input methods follow:***###
+
+    #declare or draw a card
+    def input_draw_declare(self):
+        decision = input("Enter 'draw' to draw a card. Enter 'declare' to declare and end the game.")
+        return decision
+
+    #keep/discard a drawn card
+    def input_keep_discard(self):
+        decision = input("Enter 'keep' to keep this card. Enter 'discard' to discard it.")
+        return decision
+
+    #use/ignore an 'action' card (Jack/Queen)
+    def input_use_ignore(self):
+        decision = input("Enter 'use' to go forward with this card's action. Enter 'ignore' to ignore its action.")
+        return decision
+
+    #swap or retain own card (for seen swaps)
+    def input_swap_retain(self):
+        decision = input("Enter 'swap' to swap with another player. Enter 'ignore' not to swap.")
+        return decision
+
+    #select a card from a hand
+    def input_select_a_card(self):
+        decision = int(input(f"Enter a card's position, 1-6, which you would like to select."))
+        return decision
+
+    #select a player to swap with
+    def input_select_a_player(self):
+        decision = input(f"Please select a player by entering a name from the following list: {", ".join(self.player_names)}")
+        return decision
