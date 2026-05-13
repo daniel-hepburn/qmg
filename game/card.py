@@ -31,4 +31,3 @@ class Card:
 
     __repr__ = __str__
 
-

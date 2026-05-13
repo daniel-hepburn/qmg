@@ -12,7 +12,7 @@ class Player:
         handstr = []
         for i in range(len(self.hand)):
             handstr.append(self.hand[i].__str__())
-        return f"{self.name}'s hand:\n{self.hand}"
+        return f"{self.name}"
     
     def score(self):
         return np.sum([card.value for card in self.hand])
