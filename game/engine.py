@@ -80,66 +80,9 @@ class Game:
 
 
 
-    #def player_card_swap(self, swapper, swap_type):
-    #    victim_name = input("Please enter the name of the player with whom you would like to swap.")
-
-
-
-    #current player can declare; otherwise they draw a card, and choose whether to swap it out for one of their own or discard it
-#    def play_turn(self, player):
-#        #declare or draw
-#        #
-#        #
-#        pn = self.player_names[self.players.index(player)]
-#        print(f"{pn}'s turn")
-#        declare_decision = input("Enter 'declare' to end the game now. Enter anything else to draw a card.")
-#        if declare_decision == "declare":
-#            self.declared = player 
-#            self.game_in_progress = False
-#        else:
-#            #check that the deck isn't empty; if it is, recycle & shuffle the bin
-#            if len(self.deck.cards) == 0:
-#                print("Deck is empty. Shuffling the bin into a new deck.")
-#                for i in range(len(self.bin)):
-#                    self.deck.cards.append(self.bin.pop())
-#                self.deck.shuffle()
-#                #code to shuffle bin into deck
-
-#            drawn = self.deck.draw_card()
-#            print(f"You drew {drawn}")
-            
-            #need to add try/except here
-#            decision = int(input(f"Enter a number 1-{len(player.hand)} to choose which of your cards to swap out, or enter 0 to discard without swapping."))
-#            if decision == 0:
-#                if drawn.value in [11,12]:
-#                    if drawn.value == 11:
-#                        swap_type = "seen"
-
-#                    elif drawn.value == 12:
-#                       swap_type = "blind"
-#
-#                    swap_decision = input(f"You may now make a {swap_type} swap with another player. If you wish to continue, please enter the name of the player with whom you wish to swap. Enter anything else (i.e. not a player name) to skip.")
-#                    if swap_decision not in self.player_names:
-#                        pass
-#                    else:
-#                        victim = self.players[self.player_names.index(swap_decision)]
-#                        own_card = input(f"Enter a number, 1-{len(player.hand)}, to give away.")
-#                        victim_card = input(f"Enter a number, 1-{len(victim.hand)}, to take.")
-#need to finish swap code from here-------------------------------------------------------------------------
-            
-
-#            elif 1<= decision <= len(player.hand):
-#                drawn, player.hand[decision-1] = player.hand[decision-1], drawn
-#            else:
-#                raise ValueError("You must enter a number 0-6 to swap")
-#            
-#            self.bin.append(drawn)
 
 
     def play_turn(self, player, declare_or_draw):
-        pn = self.player_names[self.players.index(player)]
-        print(f"{pn}'s turn")
-
         if declare_or_draw == "declare":
             self.declared = player
             self.game_in_progress = False
@@ -150,22 +93,34 @@ class Game:
 
             drawn = self.deck.draw_card()
             print(f"You drew {drawn}.")
+            swap_available = False
 
-            keep_or_discard = self.input_keep_discard()
-            swap_index = self._after_drawing(keep_or_discard)
-            if swap_index == -1:
-                #insert seen/unseen swap function
-                pass
-            elif 0 <= swap_index <= 5:
-                drawn, player.hand[swap_index] = player.hand[swap_index], drawn
-            else:
-                raise ValueError("Swap index must be integer value, -1 <= x <= 5")
+            while True:
+                keep_or_discard = self.input_keep_discard()
+                swap_index = self._after_drawing(keep_or_discard)
+                if swap_index == -1:
+                    if drawn.value in [11,12]:
+                        swap_available = True
+                    break
+
+                elif 0 <= swap_index <= 5:
+                    #case where player wishes to keep in exchange for one of their own
+                    if self.check_position_filled(player, swap_index):
+                        drawn, player.hand[swap_index] = player.hand[swap_index], drawn
+                        break
+                    else:
+                        pass
+                else:
+                    raise ValueError("Swap index must be integer, -1 <= index <= 5")
 
             self.bin.append(drawn)
-
+            if swap_available:
+                self.offer_swap(player, drawn.value)
+                #offer a swap based on drawn
+                pass
 
         else:
-            raise ValueError("Please either 'draw' or 'declare'")
+            raise ValueError("You must either draw or declare.")
 
 
     def _check_deck_empty(self):
@@ -178,8 +133,8 @@ class Game:
 
     def _after_drawing(self, keep_or_discard):
         if keep_or_discard == "keep":
-            print("You must now choose a card from your own hand to swap out.")
-            swap_index = self.input_select_a_card() - 1
+            print("You must choose a card from your own hand to swap out.")
+            swap_index = self.input_select_card() - 1
             return swap_index
         
         elif keep_or_discard == "discard":
@@ -187,64 +142,113 @@ class Game:
         else:
             raise ValueError("You must either keep or discard.")
 
-    #ask all players if they want to discard on top of the bin
-    def discard_opportunity(self):
 
-        #check that the game is still active; if not it skips the rest of the method
-        if not self.game_in_progress:
-            print("Game over. You can no longer discard")
-            return None
+    def offer_swap(self, player, value: int):
+        if value == 11:
+            rank = "Jack"
+            swap_type = "a seen swap"
+        elif value == 12:
+            rank = "Queen"
+            swap_type = "an unseen swap"
         else:
-            pass
+            raise ValueError("Cannot make a swap with value other than 11 or 12.")
         
-        #check that there is a card on the top of the bin for people to discard on
-        #if so it prints that card so that people can see
-        #if not it skips the rest of the method
-        bin_size = len(self.bin)
-        if bin_size == 0:
-            print("No cards in the bin. You may not discard at this time.")
+        print(f"You discarded a {rank}, which means you can make {swap_type}.")
+        use_or_ignore = self.input_use_ignore()
+
+        if use_or_ignore == "use":
+            own_card = None
+            opp_card = None
+
+            print("You must now choose a player to swap with.")
+            victim = self.input_select_player(player)
+
+            while own_card == None:
+                print("You must choose a card from your own hand.")
+                own_card_index = self.input_select_card() - 1
+                own_card = player.hand[own_card_index]
+
+            while opp_card == None:
+                print("You must choose a card from your opponent's hand.")
+                opp_card_index = self.input_select_card() - 1
+                opp_card = victim.hand[opp_card_index]
+                
+            if rank == "Jack":
+                #present both cards to player
+                #ask if they want to continue with the stop
+                #if yes - pass
+                #if no - exit func
+                pass
+
+            player.hand[own_card_index] = opp_card
+            victim.hand[opp_card_index] = own_card
+            print("Swap successful!")
+
+        elif use_or_ignore == "ignore":
             return None
         else:
-            print(f"Top card: {self.bin[-1]}")
+            raise ValueError("You must either use or ignore the swap.")
 
-        #loops through the players asking if they want to discard
-        #for each player, it asks for the position of a card they want to discard 
-        #moves to next player once they enter 0
-        #note - this removes the cards' positions altogether rather than leaving an empty string
+    def discard_opportunity(self):
+        if not self.game_in_progress:
+            return "You can no longer discard as the game has finished"
+        players_not_out = self.list_players_not_out()
+        for player in players_not_out:
+            self.individual_discard(player)
 
-        for player in self.players:
-            #check if the player has crashed out, or if they have no cards to discard
-            if player.is_out:
-                print(f"{player.name} is out and cannot discard.")
-            elif len(player.hand) == 0:
-                print(f"{player.name} has no cards and cannot discard.")
-            else:
-                print(f"{player}, you may now discard")
 
-                #generating list of indices to remove from hand
-                discard_indices = []
-                card_count = len(player.hand)
-                while -1 not in discard_indices:
-                    try:
-                        discard_choice = int(input(f"Top of bin: {self.bin[-1]}. \nSelect a card, 1-{card_count}, you would like to discard, or enter 0 to skip."))
-                        if 0 <= discard_choice <= card_count:
-                            discard_indices.append(discard_choice-1)                            
-                        else:
-                            print(f"You must enter a number between 1 and {card_count} (inclusive)")
-                    except ValueError:
-                        print("Please enter a number")
-            
-                for i in list(set(discard_indices)):
-                    if i >= 0:
-                        if player.hand[i].value == self.bin[-1].value:
-                            self.bin.append(player.hand.pop(i))
-                        else:
-                            print(f"You tried to discard {player.hand[i]} on top of {self.bin[-1]}. You're out!")
-                            player.is_out = True
-                            break
-                        print("Discarded successfully.")
+    def list_players_not_out(self):
+        players_not_out = [p for p in self.players if  not p.is_out]
+        return players_not_out
+
+
+    def individual_discard(self, player: Player):
+        print(f"{player.name}, you may now discard on {self.bin[-1]}")
+        discard_or_skip = None
+        while True:
+            discard_or_skip = self.input_discard_skip()
+            if discard_or_skip == "skip":
+                break
+            elif discard_or_skip == "discard":
+                discard_index = self.input_select_card() - 1
+                discard = player.hand[discard_index]
+
+                if self.check_position_filled(player, discard_index):
+                    if self.check_discard_valid(discard):
+                        self.discard_from_hand(player, discard_index)
+                        print("You may now discard again")
+
                     else:
-                        break        
+                        print(f"You tried to discard illegally. You're out!")
+                        player.is_out = True
+                        break
+                else:
+                    print(f"No card found in position {discard_index + 1}")
+
+
+    def check_discard_valid(self, discard):
+        if len(self.bin) == 0:
+            return False
+        elif discard.value == self.bin[-1].value:
+            return True
+        else:
+            return False
+
+    def check_position_filled(self, player: Player, index: int):
+        test = player.hand[index]
+        if test == None:
+            return False
+        elif type(test) is Card:
+            return True
+        else:
+            raise TypeError(f"Object of type {type(test)} found where expecting NoneType or Card.")
+        
+
+    def discard_from_hand(self, player, discard_index):
+        discard = player.hand[discard_index]
+        player.hand[discard_index] = None
+        self.bin.append(discard)
+        print(f"You successfully discarded {discard}")
 
 
     #runs the methods of the game in the correct logical order
@@ -255,8 +259,7 @@ class Game:
                     if player.is_out:
                         pass
                     else:
-                        print(f"{player.name}'s turn.")
-                        draw_or_declare = self.input_draw_declare()
+                        draw_or_declare = self.input_draw_declare(player)
                         self.play_turn(player, draw_or_declare)
                         self.discard_opportunity()
                 else:
@@ -268,7 +271,8 @@ class Game:
     ###***dedicated input methods follow:***###
 
     #declare or draw a card
-    def input_draw_declare(self):
+    def input_draw_declare(self, player):
+        print(f"{player.name}'s turn.")
         decision = input("Enter 'draw' to draw a card. Enter 'declare' to declare and end the game.")
         return decision
 
@@ -277,22 +281,29 @@ class Game:
         decision = input("Enter 'keep' to keep this card. Enter 'discard' to discard it.")
         return decision
 
+    #discard onto the bin or skip
+    def input_discard_skip(self):
+        decision = input("Enter 'discard' to discard a card. Enter 'skip' to skip.")
+        return decision
+    
     #use/ignore an 'action' card (Jack/Queen)
     def input_use_ignore(self):
-        decision = input("Enter 'use' to go forward with this card's action. Enter 'ignore' to ignore its action.")
+        decision = input("Enter 'use' to use this card's action. Enter 'ignore' to ignore its action.")
         return decision
 
-    #swap or retain own card (for seen swaps)
+    #swap or retain own card (for seen swaps) THIS NEEDS CHANGING
     def input_swap_retain(self):
-        decision = input("Enter 'swap' to swap with another player. Enter 'ignore' not to swap.")
+        decision = input("Enter 'swap' to swap your card with your opponent's. Enter 'retain' not to keep your card.")
         return decision
 
     #select a card from a hand
-    def input_select_a_card(self):
+    def input_select_card(self):
         decision = int(input(f"Enter a card's position, 1-6, which you would like to select."))
         return decision
 
     #select a player to swap with
-    def input_select_a_player(self):
-        decision = input(f"Please select a player by entering a name from the following list: {", ".join(self.player_names)}")
+    def input_select_player(self, player):
+        pn = input(f"Please select a player by entering a name from the following list: {", ".join([p.name for p in self.players if not p.is_out and p != player])}")
+        index = self.player_names.index(pn)
+        decision = self.players[index]
         return decision

@@ -15,4 +15,4 @@ class Player:
         return f"{self.name}"
     
     def score(self):
-        return np.sum([card.value for card in self.hand])
+        return np.sum([card.value for card in self.hand if card != None])
